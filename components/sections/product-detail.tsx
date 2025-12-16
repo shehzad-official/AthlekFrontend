@@ -92,6 +92,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [loadingBundles, setLoadingBundles] = useState(true)
   const [recommendedProducts, setRecommendedProducts] = useState<ProductCardItem[]>([])
   const [loadingRecommended, setLoadingRecommended] = useState(true)
+  const [openReviewFormKey, setOpenReviewFormKey] = useState(0)
 
   // Use dynamic color options from product
   const colorOptions = product.colors || [
@@ -664,6 +665,12 @@ const fetchProductList = async (queryString = ''): Promise<ProductCardItem[]> =>
   const roundedRating = Math.round(reviewStats.average)
   const clampedRating = Math.min(5, Math.max(0, roundedRating))
   const hasReviews = reviewStats.count > 0
+  const handleWriteReviewClick = (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+    event.preventDefault()
+    const section = document.getElementById('customer-reviews')
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setOpenReviewFormKey(prev => prev + 1)
+  }
   const reviewSummary = hasReviews
     ? `${reviewStats.average.toFixed(1)} out of 5 based on ${reviewStats.count} review${reviewStats.count === 1 ? '' : 's'}.`
     : "No reviews yet. Be the first to review this product."
@@ -1393,8 +1400,9 @@ const fetchProductList = async (queryString = ''): Promise<ProductCardItem[]> =>
                   Read all reviews
                 </Link>
               ) : (
-                <Link
-                  href="#customer-reviews"
+                <button
+                  type="button"
+                  onClick={handleWriteReviewClick}
                   className="uppercase text-black underline underline-offset-4"
                   style={{
                     fontFamily: "'Gilroy-Medium', 'Gilroy', sans-serif",
@@ -1403,7 +1411,7 @@ const fetchProductList = async (queryString = ''): Promise<ProductCardItem[]> =>
                   }}
                 >
                   Write the first review
-                </Link>
+                </button>
               )}
             </div>
           </div>
@@ -1940,6 +1948,7 @@ const fetchProductList = async (queryString = ''): Promise<ProductCardItem[]> =>
           <ProductReviews
             product={product}
             onStatsChange={(stats) => setReviewStats(stats)}
+            forceOpenFormKey={openReviewFormKey}
           />
         </div>
 

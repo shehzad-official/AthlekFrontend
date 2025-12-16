@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import type { ReactNode, ReactElement } from "react"
 import { Star, MessageSquare, Send, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -113,12 +113,14 @@ interface ReviewStats {
 interface ProductReviewsProps {
   product: Product
   onStatsChange?: (stats: ReviewStats) => void
+  forceOpenFormKey?: number
 }
 
-export default function ProductReviews({ product, onStatsChange }: ProductReviewsProps) {
+export default function ProductReviews({ product, onStatsChange, forceOpenFormKey }: ProductReviewsProps) {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [showReviewForm, setShowReviewForm] = useState(false)
+  const reviewFormRef = useRef<HTMLDivElement | null>(null)
   const [newReview, setNewReview] = useState({
     rating: 5,
     comment: "",
@@ -231,6 +233,69 @@ export default function ProductReviews({ product, onStatsChange }: ProductReview
     )
   }
 
+  const ReviewForm = () => (
+    <div ref={reviewFormRef} className="bg-white border border-gray-200 rounded-[24px] p-6 space-y-4">
+      <h3 className="text-lg font-medium text-[#212121]">Write a Review</h3>
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-2 block">Rating</label>
+        {renderStars(newReview.rating, true, (rating) =>
+          setNewReview(prev => ({ ...prev, rating }))
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Your Name</label>
+          <Input
+            value={newReview.customerName}
+            onChange={(e) => setNewReview(prev => ({ ...prev, customerName: e.target.value }))}
+            placeholder="Enter your name"
+            className="bg-white border-gray-300 text-[#212121]"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Your Email</label>
+          <Input
+            type="email"
+            value={newReview.customerEmail}
+            onChange={(e) => setNewReview(prev => ({ ...prev, customerEmail: e.target.value }))}
+            placeholder="Enter your email"
+            className="bg-white border-gray-300 text-[#212121]"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-2 block">Your Review</label>
+        <Textarea
+          value={newReview.comment}
+          onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
+          placeholder="Share your experience with this product..."
+          rows={4}
+          className="bg-white border-gray-300 text-[#212121]"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={submitReview}
+          disabled={submitting}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <Send className="h-4 w-4 mr-2" />
+          {submitting ? "Submitting..." : "Submit Review"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setShowReviewForm(false)}
+          className="border-gray-300 text-[#212121] hover:bg-gray-200"
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+
   let totalRating = 0
   for (const review of reviews as Review[]) {
     totalRating += review.rating
@@ -247,6 +312,18 @@ export default function ProductReviews({ product, onStatsChange }: ProductReview
       })
     }
   }, [averageRating, reviews.length, onStatsChange])
+
+  const lastForceKeyRef = useRef<number | null>(forceOpenFormKey ?? null)
+
+  useEffect(() => {
+    if (typeof forceOpenFormKey === 'number' && forceOpenFormKey !== lastForceKeyRef.current) {
+      lastForceKeyRef.current = forceOpenFormKey
+      setShowReviewForm(true)
+      requestAnimationFrame(() => {
+        reviewFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }, [forceOpenFormKey])
 
   const { topReview, otherReviews } = useMemo(() => {
     if (reviews.length === 0) {
@@ -313,11 +390,12 @@ export default function ProductReviews({ product, onStatsChange }: ProductReview
               Be the first to share your experience with this product.
             </p>
             <Button
-              onClick={() => setShowReviewForm(true)}
+              onClick={() => setShowReviewForm(prev => !prev)}
               className="bg-black text-white hover:bg-gray-800 px-8 py-3 rounded-full"
             >
-              Write a Review
+              {showReviewForm ? 'Cancel Review' : 'Write a Review'}
             </Button>
+            {showReviewForm && <ReviewForm />}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[clamp(320px,38vw,380px)_1fr] gap-6 lg:gap-8 xl:gap-10">
@@ -366,68 +444,7 @@ export default function ProductReviews({ product, onStatsChange }: ProductReview
                 </Button>
               </div>
 
-              {showReviewForm && (
-                <div className="bg-white border border-gray-200 rounded-[24px] p-6 space-y-4">
-                  <h3 className="text-lg font-medium text-[#212121]">Write a Review</h3>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Rating</label>
-                    {renderStars(newReview.rating, true, (rating) => 
-                      setNewReview(prev => ({ ...prev, rating }))
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Your Name</label>
-                      <Input
-                        value={newReview.customerName}
-                        onChange={(e) => setNewReview(prev => ({ ...prev, customerName: e.target.value }))}
-                        placeholder="Enter your name"
-                        className="bg-white border-gray-300 text-[#212121]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-2 block">Your Email</label>
-                      <Input
-                        type="email"
-                        value={newReview.customerEmail}
-                        onChange={(e) => setNewReview(prev => ({ ...prev, customerEmail: e.target.value }))}
-                        placeholder="Enter your email"
-                        className="bg-white border-gray-300 text-[#212121]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Your Review</label>
-                    <Textarea
-                      value={newReview.comment}
-                      onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
-                      placeholder="Share your experience with this product..."
-                      rows={4}
-                      className="bg-white border-gray-300 text-[#212121]"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <Button 
-                      onClick={submitReview} 
-                      disabled={submitting}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {submitting ? "Submitting..." : "Submit Review"}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowReviewForm(false)}
-                      className="border-gray-300 text-[#212121] hover:bg-gray-200"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {showReviewForm && <ReviewForm />}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 xl:gap-8 w-full items-start">
